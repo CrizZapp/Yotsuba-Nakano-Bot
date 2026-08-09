@@ -161,22 +161,32 @@ console.log('============================\n');
   });
 
   if (!sock.authState.creds.registered) {
-    const number = "584263900946";
-
     console.log(chalk.cyan("\n[VINCULACIÓN WHATSAPP]"));
-    console.log(
-        chalk.yellow(`🏵 Número: ${number}`)
-    );
 
-    console.log(chalk.yellow("\nGenerando código...\n"));
-
-    const code = await sock.requestPairingCode(number);
+    let number = "527531282211";
+    number = number.replace(/[^0-9]/g, "");
 
     console.log(
-        chalk.green("[CÓDIGO GENERADO] ➜ ") +
-        chalk.bold.white(code) +
-        "\n"
+        chalk.cyan(`🏵 Número de WhatsApp: ${number}`)
     );
+
+    try {
+        console.log(chalk.yellow("\nGenerando código...\n"));
+
+        const code = await sock.requestPairingCode(number);
+
+        console.log(
+            chalk.green("[CÓDIGO GENERADO] ➜ ") +
+            chalk.bold.white(code) +
+            "\n"
+        );
+
+    } catch (error) {
+        console.error(
+            chalk.red("[ERROR AL GENERAR CÓDIGO]"),
+            error
+        );
+    }
   }
 
   sock.ev.on("messages.upsert", async (chatUpdate) => {
