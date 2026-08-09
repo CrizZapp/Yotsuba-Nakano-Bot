@@ -161,7 +161,7 @@ console.log('============================\n');
   });
 
   if (!sock.authState.creds.registered) {
-    const number = "527531282211";
+    const number = "573235631996";
 
     console.log(chalk.cyan("\n[VINCULACIÓN WHATSAPP]"));
     console.log(
