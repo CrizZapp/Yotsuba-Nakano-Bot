@@ -18,19 +18,13 @@ const {
 
 const makeWASocket = baileys.default;
 
-// Almacenamiento seguro para plugins y sus categorías mapeadas
+// Tu número fijo
+const PAIRING_NUMBER = "593989954417";
+
 global.plugins = {};
 global.pluginCategories = {};
 
 const pluginsDir = path.resolve("./plugins");
-
-const question = (text) => {
-  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-  return new Promise((resolve) => rl.question(text, ans => {
-    rl.close();
-    resolve(ans);
-  }));
-};
 
 function getFiles(dir, filesList = []) {
     if (!fs.existsSync(dir)) return filesList;
@@ -54,18 +48,12 @@ async function loadPlugin(filePath) {
         const handler = module.default;
 
         if (typeof handler !== "function") {
-            console.error(
-                chalk.red(`[ERROR] ${filePath} no exporta una función por default`)
-            );
+            console.error(chalk.red(`[ERROR] ${filePath} no exporta una función por default`));
             return;
         }
 
         const folderName = path.basename(path.dirname(filePath));
-
-        const category =
-            folderName === "plugins"
-                ? "general"
-                : folderName;
+        const category = folderName === "plugins" ? "general" : folderName;
 
         global.plugins[filePath] = {
             handler,
@@ -74,26 +62,9 @@ async function loadPlugin(filePath) {
         };
 
         global.pluginCategories[filePath] = category;
-
-        console.log(
-            chalk.green(`[PLUGIN] Cargado: ${filePath}`)
-        );
-
-        console.log(
-            chalk.gray(
-                `Categoría: ${category} | Comandos: ${
-                    Array.isArray(handler.command)
-                        ? handler.command.join(", ")
-                        : handler.command || "sin comando"
-                }`
-            )
-        );
-
+        console.log(chalk.green(`[PLUGIN] Cargado: ${filePath}`));
     } catch (e) {
-        console.error(
-            chalk.red(`[ERROR] Fallo al cargar plugin: ${filePath}`),
-            e
-        );
+        console.error(chalk.red(`[ERROR] Fallo al cargar plugin: ${filePath}`), e);
     }
 }
 
@@ -126,32 +97,21 @@ function watchPlugins() {
 
 async function startBot() {
   console.clear();
-  const logo = figlet.textSync("Fieren-bot", { font: "Standard" });
+  const logo = figlet.textSync("Yotsuba Nakano", { font: "Standard" });
   console.log(chalk.cyan(logo));
 
   await loadPlugins();
-console.log('\n===== PLUGINS CARGADOS =====');
-
-for (const [file, plugin] of Object.entries(global.plugins)) {
-    console.log(
-        file,
-        '=>',
-        global.pluginCategories[file],
-        '=>',
-        plugin.command
-    );
-}
-
-console.log('============================\n');
+  console.log('\n===== PLUGINS CARGADOS =====\n');
   watchPlugins();
 
   const { state, saveCreds } = await useMultiFileAuthState("./session");
   const { version } = await fetchLatestBaileysVersion();
 
+  // TU SOCKET ORIGINAL (Intacto)
   const sock = makeWASocket({
     version,
     logger: pino({ level: "silent" }),
-    browser: ["Ubuntu", "Chrome", "20.0.0"],
+    browser: ["Ubuntu", "Chrome", "20.0.0"], 
     auth: {
       creds: state.creds,
       keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "fatal" }))
@@ -160,39 +120,10 @@ console.log('============================\n');
     syncFullHistory: false,
   });
 
-  if (!sock.authState.creds.registered) {
-    console.log(chalk.cyan("\n[VINCULACIÓN WHATSAPP]"));
-
-    let number = "584263900946";
-    number = number.replace(/[^0-9]/g, "");
-
-    console.log(
-        chalk.cyan(`🏵 Número de WhatsApp: ${number}`)
-    );
-
-    try {
-        console.log(chalk.yellow("\nGenerando código...\n"));
-
-        const code = await sock.requestPairingCode(number);
-
-        console.log(
-            chalk.green("[CÓDIGO GENERADO] ➜ ") +
-            chalk.bold.white(code) +
-            "\n"
-        );
-
-    } catch (error) {
-        console.error(
-            chalk.red("[ERROR AL GENERAR CÓDIGO]"),
-            error
-        );
-    }
-  }
-
+  // 1. PRIMERO LOS EVENTOS
   sock.ev.on("messages.upsert", async (chatUpdate) => {
     const rawM = chatUpdate.messages[0];
     if (!rawM.message) return;
-
     try {
         const { handler } = await import(`./handler.js?update=${Date.now()}`);
         await handler(sock, rawM);
@@ -206,7 +137,7 @@ console.log('============================\n');
         const reason = new Boom(lastDisconnect?.error)?.output?.statusCode;
         if (reason !== DisconnectReason.loggedOut) {
             console.log(chalk.yellow("[SISTEMA] Reconectando..."));
-            setTimeout(() => startBot(), 3000); // Pequeña pausa para evitar saturar el socket al reconectar
+            setTimeout(() => startBot(), 3000);
         } else {
             process.exit(0);
         }
@@ -218,6 +149,21 @@ console.log('============================\n');
   });
 
   sock.ev.on("creds.update", saveCreds);
+
+  // 2. DESPUÉS EL CÓDIGO CON SETTIMEOUT (Para simular la pausa que hacía el 'question')
+  if (!sock.authState.creds.registered) {
+    console.log(chalk.cyan("\n[VINCULACIÓN WHATSAPP]"));
+    
+    setTimeout(async () => {
+        try {
+            console.log(chalk.yellow(`Generando código para ${PAIRING_NUMBER}...\n`));
+            const code = await sock.requestPairingCode(PAIRING_NUMBER);
+            console.log(chalk.green("[CÓDIGO GENERADO] ➜ ") + chalk.bold.white(code) + "\n");
+        } catch (err) {
+            console.error(chalk.red("Error al pedir código:"), err);
+        }
+    }, 3000); // 3 segundos de gracia para que conecte a WhatsApp antes de pedirlo
+  }
 }
 
 startBot();
