@@ -1,5 +1,6 @@
 import axios from 'axios';
 import yts from 'yt-search';
+import config from '../../config.js';
 
 const play = async (m, { conn, from, args, usedPrefix, command }) => {
     if (!args[0]) {
@@ -28,7 +29,7 @@ const play = async (m, { conn, from, args, usedPrefix, command }) => {
                           `> 👤 *Canal:* ${video.author.name}\n` +
                           `> 👀 *Vistas:* ${video.views}`;
             
-            const footer = "Komi-bot";
+            const footer = `${config.botName}`;
 
             const buttons = [
                 {
